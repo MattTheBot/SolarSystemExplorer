@@ -1,4 +1,4 @@
-# Solar System Explorer
+# Solar System Explorer - https://mattthebot.github.io/SolarSystemExplorer/
 
 Interactive 3D solar system — runs in any browser, hosted on GitHub Pages. No software, no installs.
 
