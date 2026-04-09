@@ -1,2 +1,0 @@
-# SolarSystemExplorer
-School Project.
