@@ -212,10 +212,119 @@ window.addEventListener('DOMContentLoaded', () => {
       '<p style="color:rgba(255,255,255,0.5);font-size:13px;text-align:center;padding:2rem;">WebGL is not available in this browser.<br>Try Chrome or Firefox.</p>';
     return;
   }
-  loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', () => {
-    loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', initScene);
-  });
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', initScene);
 });
+
+
+// ── Minimal GLB Loader (handles Blender-exported GLB 2.0) ─────
+function loadGLB(url, onLoad, onError) {
+  fetch(url)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(buf => {
+      const view = new DataView(buf);
+      // Parse GLB header
+      const magic = view.getUint32(0, true);
+      if (magic !== 0x46546C67) throw new Error('Not a GLB file');
+      const version = view.getUint32(4, true);
+      // Chunk 0: JSON
+      const jsonLen = view.getUint32(12, true);
+      const jsonBytes = new Uint8Array(buf, 20, jsonLen);
+      const json = JSON.parse(new TextDecoder().decode(jsonBytes));
+      // Chunk 1: BIN (optional)
+      let binBuf = null;
+      const binOffset = 20 + jsonLen;
+      if (buf.byteLength > binOffset + 8) {
+        const binLen = view.getUint32(binOffset, true);
+        binBuf = buf.slice(binOffset + 8, binOffset + 8 + binLen);
+      }
+
+      const group = new THREE.Group();
+      const bufViews = json.bufferViews || [];
+      const accessors = json.accessors || [];
+      const materials = (json.materials || []).map(mat => {
+        const m = new THREE.MeshStandardMaterial();
+        const pbr = mat.pbrMetallicRoughness;
+        if (pbr) {
+          if (pbr.baseColorFactor) {
+            const [r,g,b] = pbr.baseColorFactor;
+            m.color.setRGB(r,g,b);
+          }
+          if (pbr.baseColorTexture != null && json.textures) {
+            const texInfo = json.textures[pbr.baseColorTexture.index];
+            const imgInfo = json.images[texInfo.source];
+            if (imgInfo.bufferView != null) {
+              const bv = bufViews[imgInfo.bufferView];
+              const imgData = new Uint8Array(binBuf, bv.byteOffset||0, bv.byteLength);
+              const blob = new Blob([imgData], {type: imgInfo.mimeType||'image/png'});
+              const url = URL.createObjectURL(blob);
+              const tex = new THREE.TextureLoader().load(url);
+              tex.flipY = false;
+              m.map = tex;
+            }
+          }
+          m.metalness = pbr.metallicFactor != null ? pbr.metallicFactor : 0.0;
+          m.roughness = pbr.roughnessFactor != null ? pbr.roughnessFactor : 0.8;
+        }
+        return m;
+      });
+
+      function getAccessorData(idx) {
+        const acc = accessors[idx];
+        const bv = bufViews[acc.bufferView];
+        const byteOffset = (bv.byteOffset||0) + (acc.byteOffset||0);
+        const compCount = {SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT4:16}[acc.type];
+        const TypedArray = acc.componentType === 5126 ? Float32Array :
+                           acc.componentType === 5123 ? Uint16Array  :
+                           acc.componentType === 5121 ? Uint8Array   :
+                           acc.componentType === 5125 ? Uint32Array  : Float32Array;
+        return new TypedArray(binBuf, byteOffset, acc.count * compCount);
+      }
+
+      (json.meshes || []).forEach(mesh => {
+        mesh.primitives.forEach(prim => {
+          const geo = new THREE.BufferGeometry();
+          if (prim.attributes.POSITION != null) {
+            geo.setAttribute('position', new THREE.BufferAttribute(
+              new Float32Array(getAccessorData(prim.attributes.POSITION)), 3));
+          }
+          if (prim.attributes.NORMAL != null) {
+            geo.setAttribute('normal', new THREE.BufferAttribute(
+              new Float32Array(getAccessorData(prim.attributes.NORMAL)), 3));
+          }
+          if (prim.attributes.TEXCOORD_0 != null) {
+            geo.setAttribute('uv', new THREE.BufferAttribute(
+              new Float32Array(getAccessorData(prim.attributes.TEXCOORD_0)), 2));
+          }
+          if (prim.indices != null) {
+            const idxData = getAccessorData(prim.indices);
+            geo.setIndex(new THREE.BufferAttribute(
+              idxData instanceof Uint32Array ? idxData : new Uint32Array(idxData), 1));
+          }
+          geo.computeBoundingBox();
+          const mat = prim.material != null ? materials[prim.material] :
+                      new THREE.MeshStandardMaterial({color:0xaaaaaa});
+          const m = new THREE.Mesh(geo, mat);
+          group.add(m);
+        });
+      });
+
+      // Apply node transforms
+      (json.nodes || []).forEach(node => {
+        if (node.matrix) {
+          // handled by scene graph if needed
+        }
+      });
+
+      onLoad({ scene: group });
+    })
+    .catch(err => { if (onError) onError(err); });
+}
+
+// Patch onto THREE namespace for compatibility with existing code
+THREE.GLTFLoader = function() {};
+THREE.GLTFLoader.prototype.load = function(url, onLoad, onProgress, onError) {
+  loadGLB(url, onLoad, onError);
+};
 
 function setStatus(msg, pct) {
   const s = document.getElementById('load-status');
