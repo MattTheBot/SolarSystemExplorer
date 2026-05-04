@@ -1,43 +1,67 @@
-# Solar System Explorer - https://mattthebot.github.io/SolarSystemExplorer/
+# Solar System Explorer
 
-Interactive 3D solar system
+An interactive 3D solar system you can fly through in your browser.
+No installs, no software — just open the link.
 
-## Scale
+**Created by Matthew Thonhauser · School Project**
 
-**Planet sizes** are accurate relative to each other — Earth = 1×, Jupiter = 11.2×, The Moon = 0.27×.
+**[Launch Explorer →](https://mattthebot.github.io/SolarSystemExplorer/)**
 
-**Orbital periods** are accurate — Mercury completes a lap in 88 simulated days, Neptune in 164.8 years.
+---
 
-## Swapping in your own models
+## Controls
 
-Every planet has a clearly marked comment in `index.html`:
+| Input | Action |
+|-------|--------|
+| WASD / Arrow keys | Fly forward, back, strafe |
+| Q / E | Move up / down |
+| Hold Shift | 3× speed boost |
+| Mouse drag | Look around |
+| Scroll | Zoom in / out |
+| Click a planet | Camera flies to it |
+| Left panel | Select any planet or the Moon |
+| Spacebar | Toggle orbital animation on/off |
+| Reset View | Return to starting position |
+| ⓘ button | Scale & proportions info |
 
-```js
-// ┌──────────────────────────────────────────────────────────┐
-// │  SWAP MODEL — replace SphereGeometry below with your     │
-// │  loaded GLTFLoader mesh, keyed on body.id                │
-// └──────────────────────────────────────────────────────────┘
-```
+---
 
-To load a GLB file, add this before the BODIES loop:
+## Scale & Proportions
 
-```html
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-```
+**Planet sizes** are accurately scaled relative to each other.
+Earth = 1×, Jupiter = 11.2×, the Sun = 109× Earth's radius.
+Roughly 1,000 Jupiters and 1,300,000 Earths fit inside the Sun by volume.
 
-Then replace the `new THREE.Mesh(new THREE.SphereGeometry(...), ...)` block with:
+**Orbital distances** use √AU compression so all planets remain visible.
+True scale would place Neptune 500 metres from a marble-sized Sun —
+everything else would be invisible. The compression preserves the
+proportional feel: inner planets are tightly bunched, then a large
+gap before Jupiter, then the vast outer system.
 
-```js
-const loader = new THREE.GLTFLoader();
-loader.load('models/earth.glb', gltf => {
-  const model = gltf.scene;
-  model.scale.setScalar(dispR);
-  model.position.x = dispOrbit;
-  pivot.add(model);
-});
-```
+| Planet | Real distance | Relative spacing |
+|--------|--------------|-----------------|
+| Mercury | 0.39 AU | — |
+| Venus | 0.72 AU | 1.9× Mercury |
+| Earth | 1.00 AU | 2.6× Mercury |
+| Mars | 1.52 AU | 3.9× Mercury |
+| Jupiter | 5.20 AU | 13× Mercury |
+| Saturn | 9.58 AU | 25× Mercury |
+| Uranus | 19.2 AU | 50× Mercury |
+| Neptune | 30.1 AU | 78× Mercury |
 
-## Credit
+These ratios are reflected in the model's display distances.
 
-- [Three.js r128](https://threejs.org/) via CDN — WebGL rendering
-- Vanilla JS, zero build tools, single file
+**Orbital periods:** when orbits are enabled, 1 real second = 8 simulated Earth days.
+
+---
+
+## Tech
+
+- [Three.js r128](https://threejs.org/) via CDN — WebGL 3D rendering
+- GLB planet models in `/planets/` folder
+- Single HTML file, zero build tools, works offline once cached
+
+## Hosting
+
+Hosted on [GitHub Pages](https://pages.github.com/) — free static site hosting.
+Repository: [github.com/MattTheBot/SolarSystemExplorer](https://github.com/MattTheBot/SolarSystemExplorer)

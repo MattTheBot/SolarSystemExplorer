@@ -163,6 +163,16 @@
 </div>
 
 <div id="flying-to">Flying to &nbsp;<span id="flying-name"></span></div>
+<div id="info-btn" title="Scale information" style="position:fixed;top:20px;right:130px;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);user-select:none;transition:color 0.2s,border-color 0.2s;" onmouseenter="this.style.color='rgba(255,255,255,0.9)';this.style.borderColor='rgba(255,255,255,0.4)'" onmouseleave="this.style.color='rgba(255,255,255,0.5)';this.style.borderColor='rgba(255,255,255,0.18)'">i</div>
+
+<div id="info-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(420px,90vw);background:rgba(10,10,14,0.92);border:1px solid rgba(255,255,255,0.14);border-radius:16px;padding:28px 30px;backdrop-filter:blur(24px);z-index:50;">
+  <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:10px;">About this model</div>
+  <h2 style="font-size:20px;font-weight:600;color:#fff;margin-bottom:18px;">Scale &amp; Proportions</h2>
+  <div style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:18px;"></div>
+  <div id="info-rows" style="font-size:13px;line-height:1.9;color:rgba(255,255,255,0.7);"></div>
+  <button onclick="document.getElementById('info-modal').style.display='none'" style="margin-top:22px;width:100%;padding:10px;border:1px solid rgba(255,255,255,0.15);border-radius:8px;background:transparent;color:rgba(255,255,255,0.5);font-size:12px;letter-spacing:0.08em;cursor:pointer;font-family:inherit;">Close</button>
+</div>
+<div id="info-overlay" style="display:none;position:fixed;inset:0;z-index:49;" onclick="document.getElementById('info-modal').style.display='none';document.getElementById('info-overlay').style.display='none';"></div>
 <div id="orbit-btn" style="position:fixed;top:20px;right:20px;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 14px;cursor:pointer;backdrop-filter:blur(10px);background:rgba(255,255,255,0.05);user-select:none;transition:color 0.2s,border-color 0.2s;" title="Toggle orbital animation">Orbits: OFF</div>
 <div id="nav-hint">WASD — move &nbsp;·&nbsp; Shift — boost &nbsp;·&nbsp; Drag — look &nbsp;·&nbsp; Click — fly &nbsp;·&nbsp; Space — orbits</div>
 
@@ -202,7 +212,9 @@ window.addEventListener('DOMContentLoaded', () => {
       '<p style="color:rgba(255,255,255,0.5);font-size:13px;text-align:center;padding:2rem;">WebGL is not available in this browser.<br>Try Chrome or Firefox.</p>';
     return;
   }
-  loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', initScene);
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', () => {
+    loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', initScene);
+  });
 });
 
 function setStatus(msg, pct) {
@@ -225,14 +237,14 @@ function initScene() {
 // Distances: sqrt(AU)*45 — preserves inner/outer system proportions, Neptune at ~247 units
 // Sun display radius ~10 units, Mercury starts at 28 — always outside
 const AU_DISPLAY_MAP = {
-  0.387:  28,  // Mercury
-  0.723:  38,  // Venus
-  1.000:  45,  // Earth
-  1.524:  56,  // Mars
-  5.204: 103,  // Jupiter
-  9.582: 139,  // Saturn
-  19.20: 197,  // Uranus
-  30.07: 247,  // Neptune
+  0.387: 204,   // Mercury
+  0.723: 279,   // Venus
+  1.000: 328,   // Earth
+  1.524: 405,   // Mars
+  5.204: 748,   // Jupiter
+  9.582: 1015,   // Saturn
+  19.20: 1437,   // Uranus
+  30.07: 1798,   // Neptune
 };
 function auToDisplay(au) {
   const keys = Object.keys(AU_DISPLAY_MAP).map(Number);
@@ -243,7 +255,7 @@ function auToDisplay(au) {
 
 // All planet radii are relative to Earth = 1.0
 // DISPLAY_SCALE converts those ratios to screen units
-const DISPLAY_SCALE = 0.55;
+const DISPLAY_SCALE = 1.1;
 
 // ─────────────────────────────────────────────────────────────
 //  PLANET DATA  (real orbital ratios, real size ratios)
@@ -304,8 +316,8 @@ const BODIES = [
 //  SCENE
 // ─────────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 50000);
-camera.position.set(130, 60, 160);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 200000);
+camera.position.set(600, 280, 900);
 camera.lookAt(0, 0, 0); // overridden by applyLook()
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -320,7 +332,7 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-const sunLight = new THREE.PointLight(0xfff8e7, 3.5, 50000);
+const sunLight = new THREE.PointLight(0xfff8e7, 4.5, 200000);
 scene.add(sunLight);
 scene.add(new THREE.AmbientLight(0x0d0d18, 1));
 
@@ -332,7 +344,8 @@ starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
 scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, sizeAttenuation: true })));
 
 // Sun
-const SUN_R = 8.5; // fixed display size — cosmetic, keeps inner planets visible
+const SUN_R = 109 * DISPLAY_SCALE; // accurate ratio: Sun = 109x Earth radius
+// Sun placeholder
 const sunMesh = new THREE.Mesh(
   new THREE.SphereGeometry(SUN_R, 48, 48),
   new THREE.MeshBasicMaterial({ color: 0xffcc44 })
@@ -342,6 +355,19 @@ scene.add(new THREE.Mesh(
   new THREE.SphereGeometry(SUN_R * 1.3, 32, 32),
   new THREE.MeshBasicMaterial({ color: 0xff8800, transparent: true, opacity: 0.07, side: THREE.BackSide })
 ));
+// Load sun GLB
+const sunLoader = new THREE.GLTFLoader();
+sunLoader.load('planets/sun.glb', (gltf) => {
+  const model = gltf.scene;
+  const box = new THREE.Box3().setFromObject(model);
+  const sz = new THREE.Vector3(); box.getSize(sz);
+  const maxDim = Math.max(sz.x, sz.y, sz.z);
+  model.scale.setScalar((SUN_R * 2) / maxDim);
+  const ctr = new THREE.Vector3(); box.getCenter(ctr);
+  model.position.sub(ctr.multiplyScalar((SUN_R * 2) / maxDim));
+  scene.add(model);
+  sunMesh.visible = false;
+}, undefined, () => { console.warn('sun.glb not found, using fallback'); });
 
 // World position helper — declared early so build loop can use it
 const _wp = new THREE.Vector3();
@@ -370,24 +396,51 @@ BODIES.forEach(body => {
   const pivot = new THREE.Object3D();
   scene.add(pivot);
 
-  // ┌──────────────────────────────────────────────────────────┐
-  // │  SWAP MODEL — replace SphereGeometry below with your     │
-  // │  loaded GLTFLoader mesh, keyed on body.id                │
-  // │  e.g.: if (body.id === 'earth') mesh = gltfScene;        │
-  // └──────────────────────────────────────────────────────────┘
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(dispR, 40, 40),
-    new THREE.MeshPhongMaterial({
-      color: body.color,
-      shininess: (body.id === 'earth' || body.id === 'venus') ? 55 : 8,
-      specular: 0x1a1a1a
-    })
-  );
+  // Invisible placeholder sphere — replaced by GLB once loaded
+  const mat = new THREE.MeshPhongMaterial({ color: body.color, transparent: true, opacity: 0.0 });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(dispR, 12, 12), mat);
   mesh.position.x = dispOrbit;
-  mesh.rotation.z = THREE.MathUtils.degToRad(body.axialTiltDeg || 0);
   mesh.userData.bodyId = body.id;
   pivot.add(mesh);
   clickableObjects.push(mesh);
+
+  // Load planet GLB from planets/ folder
+  (function(b, m, dr, dorb) {
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      `planets/${b.id}.glb`,
+      (gltf) => {
+        const model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const sz = new THREE.Vector3(); box.getSize(sz);
+        const maxDim = Math.max(sz.x, sz.y, sz.z);
+        const sf = (dr * 2) / maxDim;
+        model.scale.setScalar(sf);
+        const ctr = new THREE.Vector3(); box.getCenter(ctr);
+        model.position.set(dorb - ctr.x * sf, -ctr.y * sf, -ctr.z * sf);
+        model.rotation.z = THREE.MathUtils.degToRad(b.axialTiltDeg || 0);
+        model.userData.bodyId = b.id;
+        pivot.add(model);
+        // Register all submeshes as clickable
+        model.traverse(child => {
+          if (child.isMesh) {
+            child.userData.bodyId = b.id;
+            clickableObjects.push(child);
+          }
+        });
+        // Hide placeholder
+        m.visible = false;
+      },
+      undefined,
+      () => {
+        // Fallback: show sphere if GLB missing
+        console.warn(`planets/${b.id}.glb not found`);
+        m.material.transparent = false;
+        m.material.opacity = 1.0;
+        m.rotation.z = THREE.MathUtils.degToRad(b.axialTiltDeg || 0);
+      }
+    );
+  })(body, mesh, dispR, dispOrbit);
 
   // Rings (Saturn / Uranus)
   if (body.hasRings) {
@@ -424,14 +477,37 @@ BODIES.forEach(body => {
 
       const moonR = Math.max(0.06, moon.realRadius * dispR);
 
-      // ┌────────────────────────────────────────────────────────┐
-      // │  SWAP MODEL — replace SphereGeometry for moon.id       │
-      // └────────────────────────────────────────────────────────┘
-      const moonMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(moonR, 24, 24),
-        new THREE.MeshPhongMaterial({ color: moon.color, shininess: 4 })
+      const moonMat = new THREE.MeshPhongMaterial({ color: moon.color, shininess: 4, transparent: true, opacity: 0.0 });
+      const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(moonR, 12, 12), moonMat);
+      // Load moon GLB
+      const moonLoader = new THREE.GLTFLoader();
+      moonLoader.load(
+        `planets/${moon.id}.glb`,
+        (gltf) => {
+          const model = gltf.scene;
+          const box = new THREE.Box3().setFromObject(model);
+          const size = new THREE.Vector3();
+          box.getSize(size);
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const scaleFactor = (moonR * 2) / maxDim;
+          model.scale.setScalar(scaleFactor);
+          const center = new THREE.Vector3();
+          box.getCenter(center);
+          model.position.sub(center.multiplyScalar(scaleFactor));
+          model.userData.bodyId = moon.id;
+          model.position.x += moonMesh.position.x;
+          moonPivot.add(model);
+          const idx = clickableObjects.indexOf(moonMesh);
+          if (idx !== -1) clickableObjects[idx] = model;
+          moonMesh.material.opacity = 0;
+          model.traverse(child => {
+            if (child.isMesh) { child.userData.bodyId = moon.id; clickableObjects.push(child); }
+          });
+        },
+        undefined,
+        () => { moonMat.transparent = false; moonMat.opacity = 1.0; }
       );
-      moonMesh.position.x = 6.0 * dispR;  // Moon clearly orbits Earth, well outside sun
+      moonMesh.position.x = 8.0 * dispR;  // Moon orbit at 8x Earth display radius
       moonMesh.userData.bodyId = moon.id;
       moonPivot.add(moonMesh);
       clickableObjects.push(moonMesh);
@@ -500,8 +576,8 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-let camYaw = -0.488334, camPitch = -0.319801;
-let targetYaw = -0.488334, targetPitch = -0.319801;
+let camYaw = -0.370891, camPitch = -0.282218;
+let targetYaw = -0.370891, targetPitch = -0.282218;
 let isDragging = false, didDrag = false;
 let lastMX = 0, lastMY = 0;
 
@@ -547,7 +623,7 @@ function smoothLook(dt) {
 
 // Smooth velocity-based movement
 const camVel = new THREE.Vector3();
-const CAM_ACCEL = 120, CAM_DRAG = 0.85;
+const CAM_ACCEL = 400, CAM_DRAG = 0.82;
 
 function updateMovement(dt) {
   if (isFlying) { camVel.set(0,0,0); return; }
@@ -581,7 +657,7 @@ function projectLabel(mesh, el) {
   el.style.left = sx + 'px';
   el.style.top  = sy + 'px';
   const d = wpos.distanceTo(camera.position);
-  el.style.opacity = Math.min(1, 200 / d).toString();
+  el.style.opacity = Math.min(1, 900 / d).toString();
 }
 
 function updateLabels() {
@@ -661,7 +737,7 @@ function checkProximity() {
   let closest = null, closestD = Infinity;
   planetPivots.forEach(({ mesh, body, dispR, moons }) => {
     const d = camera.position.distanceTo(getWorldPos(mesh));
-    const thresh = Math.max(4, dispR * 10);
+    const thresh = Math.max(8, dispR * 8);
     if (d < thresh && d < closestD) { closestD = d; closest = body; }
     moons.forEach(m => {
       const md = camera.position.distanceTo(getWorldPos(m.mesh));
@@ -774,13 +850,41 @@ function flyToById(id) {
 
 // Reset button
 document.getElementById('reset-btn').addEventListener('click', () => {
-  camera.position.set(130, 60, 160);
-  camYaw = -0.488334; camPitch = -0.319801;
-  targetYaw = -0.488334; targetPitch = -0.319801;
+  camera.position.set(600, 280, 900);
+  camYaw = -0.370891; camPitch = -0.282218;
+  targetYaw = -0.370891; targetPitch = -0.282218;
   applyLook();
   camVel.set(0,0,0);
   document.querySelectorAll('.pp-item').forEach(el => el.classList.remove('active'));
   hidePanel();
+});
+
+
+// ── Info modal ────────────────────────────────────────────────
+(function buildInfoModal() {
+  const rows = [
+    ['Planet sizes', 'Accurately scaled relative to each other. Earth = 1×, Jupiter = 11.2×, the Sun = 109× Earth radius.'],
+    ['Sun vs Jupiter', 'The Sun is ~10× Jupiter's radius — about 1,000 Jupiters fit inside by volume.'],
+    ['Sun vs Earth', '~1,300,000 Earths fit inside the Sun by volume.'],
+    ['Orbital distances', 'Compressed using √AU × scale so all planets remain visible. Real scale would put Neptune 500m from a marble-sized Sun.'],
+    ['Inner system', 'Mercury → Mars span 0.387 – 1.52 AU. In this model that gap is ~67 display units.'],
+    ['Outer system', 'Jupiter → Neptune span 5.2 – 30 AU — 20× wider than the inner system, reflected in the model.'],
+    ['The Moon', 'Orbits Earth at 7× Earth's display radius. Real distance is ~60 Earth radii (384,400 km).'],
+    ['Orbital periods', 'When orbits are ON: 1 real second = 8 simulated Earth days.'],
+  ];
+  const container = document.getElementById('info-rows');
+  if (!container) return;
+  container.innerHTML = rows.map(([label, text]) =>
+    `<div style="margin-bottom:12px;"><span style="color:#fff;font-weight:500;">\${label}:</span> \${text}</div>`
+  ).join('');
+})();
+
+document.getElementById('info-btn').addEventListener('click', () => {
+  const modal = document.getElementById('info-modal');
+  const overlay = document.getElementById('info-overlay');
+  const show = modal.style.display === 'none';
+  modal.style.display = show ? 'block' : 'none';
+  overlay.style.display = show ? 'block' : 'none';
 });
 
 // ─────────────────────────────────────────────────────────────
