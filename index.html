@@ -863,14 +863,14 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 // ── Info modal ────────────────────────────────────────────────
 (function buildInfoModal() {
   const rows = [
-    ['Planet sizes', 'Accurately scaled relative to each other. Earth = 1×, Jupiter = 11.2×, the Sun = 109× Earth radius.'],
-    ['Sun vs Jupiter', 'The Sun is ~10× Jupiter's radius — about 1,000 Jupiters fit inside by volume.'],
-    ['Sun vs Earth', '~1,300,000 Earths fit inside the Sun by volume.'],
-    ['Orbital distances', 'Compressed using √AU × scale so all planets remain visible. Real scale would put Neptune 500m from a marble-sized Sun.'],
-    ['Inner system', 'Mercury → Mars span 0.387 – 1.52 AU. In this model that gap is ~67 display units.'],
-    ['Outer system', 'Jupiter → Neptune span 5.2 – 30 AU — 20× wider than the inner system, reflected in the model.'],
-    ['The Moon', 'Orbits Earth at 7× Earth's display radius. Real distance is ~60 Earth radii (384,400 km).'],
-    ['Orbital periods', 'When orbits are ON: 1 real second = 8 simulated Earth days.'],
+    ["Planet sizes", "Accurately scaled relative to each other. Earth = 1x, Jupiter = 11.2x, the Sun = 109x Earth radius."],
+    ["Sun vs Jupiter", "The Sun is ~10x Jupiter's radius — about 1,000 Jupiters fit inside by volume."],
+    ["Sun vs Earth", "~1,300,000 Earths fit inside the Sun by volume."],
+    ["Orbital distances", "Compressed using sqrt(AU) x scale so all planets remain visible. True scale would put Neptune 500m from a marble-sized Sun."],
+    ["Inner system", "Mercury to Mars spans 0.387 to 1.52 AU. Inner planets are tightly bunched together."],
+    ["Outer system", "Jupiter to Neptune spans 5.2 to 30 AU — 20x wider than the inner system, reflected in the model."],
+    ["The Moon", "Orbits Earth at 8x Earth's display radius. Real distance is ~60 Earth radii (384,400 km)."],
+    ["Orbital periods", "When orbits are ON: 1 real second = 8 simulated Earth days."],
   ];
   const container = document.getElementById('info-rows');
   if (!container) return;
