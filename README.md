@@ -1,7 +1,6 @@
 # Solar System Explorer
 
 An interactive 3D solar system you can fly through in your browser.
-No installs, no software — just open the link.
 
 **Created by Matthew Thonhauser · School Project**
 
