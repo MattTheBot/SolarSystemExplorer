@@ -320,12 +320,6 @@ function loadGLB(url, onLoad, onError) {
     .catch(err => { if (onError) onError(err); });
 }
 
-// Patch onto THREE namespace for compatibility with existing code
-THREE.GLTFLoader = function() {};
-THREE.GLTFLoader.prototype.load = function(url, onLoad, onProgress, onError) {
-  loadGLB(url, onLoad, onError);
-};
-
 function setStatus(msg, pct) {
   const s = document.getElementById('load-status');
   const f = document.querySelector('.loader-fill');
@@ -334,6 +328,11 @@ function setStatus(msg, pct) {
 }
 
 function initScene() {
+  // Patch GLTFLoader onto THREE (THREE is now loaded)
+  THREE.GLTFLoader = function() {};
+  THREE.GLTFLoader.prototype.load = function(url, onLoad, _prog, onError) {
+    loadGLB(url, onLoad, onError);
+  };
   setStatus('Building scene…', 0); setTimeout(() => setStatus('Placing planets…', 35), 800); setTimeout(() => setStatus('Almost ready…', 65), 2000);
 
 // ─────────────────────────────────────────────────────────────
@@ -346,14 +345,14 @@ function initScene() {
 // Distances: sqrt(AU)*45 — preserves inner/outer system proportions, Neptune at ~247 units
 // Sun display radius ~10 units, Mercury starts at 28 — always outside
 const AU_DISPLAY_MAP = {
-  0.387: 204,   // Mercury
-  0.723: 279,   // Venus
-  1.000: 328,   // Earth
-  1.524: 405,   // Mars
-  5.204: 748,   // Jupiter
-  9.582: 1015,   // Saturn
-  19.20: 1437,   // Uranus
-  30.07: 1798,   // Neptune
+  0.387: 580,   // Mercury
+  0.723: 793,   // Venus
+  1.000: 932,   // Earth
+  1.524: 1151,   // Mars
+  5.204: 2127,   // Jupiter
+  9.582: 2886,   // Saturn
+  19.20: 4085,   // Uranus
+  30.07: 5113,   // Neptune
 };
 function auToDisplay(au) {
   const keys = Object.keys(AU_DISPLAY_MAP).map(Number);
@@ -364,7 +363,7 @@ function auToDisplay(au) {
 
 // All planet radii are relative to Earth = 1.0
 // DISPLAY_SCALE converts those ratios to screen units
-const DISPLAY_SCALE = 1.1;
+const DISPLAY_SCALE = 4.4;
 
 // ─────────────────────────────────────────────────────────────
 //  PLANET DATA  (real orbital ratios, real size ratios)
@@ -425,8 +424,8 @@ const BODIES = [
 //  SCENE
 // ─────────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 200000);
-camera.position.set(600, 280, 900);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 500000);
+camera.position.set(1300, 600, 1900);
 camera.lookAt(0, 0, 0); // overridden by applyLook()
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -441,7 +440,7 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-const sunLight = new THREE.PointLight(0xfff8e7, 4.5, 200000);
+const sunLight = new THREE.PointLight(0xfff8e7, 5.0, 500000);
 scene.add(sunLight);
 scene.add(new THREE.AmbientLight(0x0d0d18, 1));
 
@@ -685,8 +684,8 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-let camYaw = -0.370891, camPitch = -0.282218;
-let targetYaw = -0.370891, targetPitch = -0.282218;
+let camYaw = -0.257324, camPitch = -0.296396;
+let targetYaw = -0.257324, targetPitch = -0.296396;
 let isDragging = false, didDrag = false;
 let lastMX = 0, lastMY = 0;
 
@@ -732,7 +731,7 @@ function smoothLook(dt) {
 
 // Smooth velocity-based movement
 const camVel = new THREE.Vector3();
-const CAM_ACCEL = 400, CAM_DRAG = 0.82;
+const CAM_ACCEL = 1000, CAM_DRAG = 0.82;
 
 function updateMovement(dt) {
   if (isFlying) { camVel.set(0,0,0); return; }
@@ -766,7 +765,7 @@ function projectLabel(mesh, el) {
   el.style.left = sx + 'px';
   el.style.top  = sy + 'px';
   const d = wpos.distanceTo(camera.position);
-  el.style.opacity = Math.min(1, 900 / d).toString();
+  el.style.opacity = Math.min(1, 2500 / d).toString();
 }
 
 function updateLabels() {
@@ -959,9 +958,9 @@ function flyToById(id) {
 
 // Reset button
 document.getElementById('reset-btn').addEventListener('click', () => {
-  camera.position.set(600, 280, 900);
-  camYaw = -0.370891; camPitch = -0.282218;
-  targetYaw = -0.370891; targetPitch = -0.282218;
+  camera.position.set(1300, 600, 1900);
+  camYaw = -0.257324; camPitch = -0.296396;
+  targetYaw = -0.257324; targetPitch = -0.296396;
   applyLook();
   camVel.set(0,0,0);
   document.querySelectorAll('.pp-item').forEach(el => el.classList.remove('active'));
