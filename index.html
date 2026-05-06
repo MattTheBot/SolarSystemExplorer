@@ -440,9 +440,12 @@ window.addEventListener('resize', () => {
 });
 
 // Lighting
-const sunLight = new THREE.PointLight(0xfff8e7, 5.0, 500000);
+const sunLight = new THREE.PointLight(0xfff8e7, 8.0, 0); // 0 = no distance falloff
 scene.add(sunLight);
-scene.add(new THREE.AmbientLight(0x0d0d18, 1));
+scene.add(new THREE.AmbientLight(0x111122, 0.45)); // soft space ambient
+const fillLight = new THREE.DirectionalLight(0x8899cc, 0.4);
+fillLight.position.set(-1, 0.5, -1);
+scene.add(fillLight); // fill from opposite sun side
 
 // Starfield
 const starPos = new Float32Array(9000);
@@ -495,6 +498,7 @@ BODIES.forEach(body => {
     new THREE.MeshBasicMaterial({ color: 0x1a1a1a, side: THREE.DoubleSide })
   );
   orbitRing.rotation.x = Math.PI / 2;
+  orbitRing.userData.planetId = body.id;
   scene.add(orbitRing);
 
   // Planet pivot
@@ -526,11 +530,19 @@ BODIES.forEach(body => {
         model.rotation.z = THREE.MathUtils.degToRad(b.axialTiltDeg || 0);
         model.userData.bodyId = b.id;
         pivot.add(model);
-        // Register all submeshes as clickable
+        // Register all submeshes as clickable, fix materials for point lighting
         model.traverse(child => {
           if (child.isMesh) {
             child.userData.bodyId = b.id;
             clickableObjects.push(child);
+            // Convert to Phong so point light works correctly
+            const oldMat = child.material;
+            child.material = new THREE.MeshPhongMaterial({
+              map: oldMat.map || null,
+              color: oldMat.color || new THREE.Color(0xffffff),
+              shininess: 8,
+              specular: new THREE.Color(0x222222),
+            });
           }
         });
         // Hide placeholder
@@ -606,7 +618,16 @@ BODIES.forEach(body => {
           if (idx !== -1) clickableObjects[idx] = model;
           moonMesh.material.opacity = 0;
           model.traverse(child => {
-            if (child.isMesh) { child.userData.bodyId = moon.id; clickableObjects.push(child); }
+            if (child.isMesh) {
+              child.userData.bodyId = moon.id;
+              clickableObjects.push(child);
+              const oldMat = child.material;
+              child.material = new THREE.MeshPhongMaterial({
+                map: oldMat.map || null,
+                color: oldMat.color || new THREE.Color(0xffffff),
+                shininess: 4,
+              });
+            }
           });
         },
         undefined,
@@ -626,7 +647,7 @@ BODIES.forEach(body => {
     });
   }
 
-  planetPivots.push({ pivot, body, mesh, dispR, dispOrbit, moons: moonRecords, labelEl: label });
+  planetPivots.push({ pivot, body, mesh, dispR, dispOrbit, moons: moonRecords, labelEl: label, orbitRing });
 });
 
 // Init moon positions immediately (so they're correct even when orbits are paused)
@@ -784,7 +805,32 @@ const flightTo   = new THREE.Vector3();
 const flyingToEl   = document.getElementById('flying-to');
 const flyingNameEl = document.getElementById('flying-name');
 
-function startFlight(targetPos, name, arrivalDist) {
+let activeOrbitRing = null;
+
+function highlightOrbit(planetId) {
+  // Reset previous
+  planetPivots.forEach(p => {
+    if (p.orbitRing) {
+      p.orbitRing.material.color.setHex(0x1a1a1a);
+      p.orbitRing.material.opacity = 1;
+      p.orbitRing.geometry = new THREE.RingGeometry(
+        p.dispOrbit - 0.018, p.dispOrbit + 0.018, 200
+      );
+    }
+  });
+  // Highlight target
+  if (planetId) {
+    const target = planetPivots.find(p => p.body.id === planetId);
+    if (target && target.orbitRing) {
+      target.orbitRing.material.color.setHex(0xddaa22);
+      target.orbitRing.geometry = new THREE.RingGeometry(
+        target.dispOrbit - 0.06, target.dispOrbit + 0.06, 200
+      );
+    }
+  }
+}
+
+function startFlight(targetPos, name, arrivalDist, planetId) {
   flightFrom.copy(camera.position);
   const dir = targetPos.clone().sub(camera.position).normalize();
   flightTo.copy(targetPos).addScaledVector(dir, -arrivalDist);
@@ -792,6 +838,7 @@ function startFlight(targetPos, name, arrivalDist) {
   isFlying = true;
   flyingNameEl.textContent = name;
   flyingToEl.classList.add('visible');
+  highlightOrbit(planetId || null);
 }
 
 function easeInOut(t) {
@@ -884,7 +931,7 @@ renderer.domElement.addEventListener('click', e => {
       }
     });
   });
-  startFlight(wpos, bodyName, arrivalDist);
+  startFlight(wpos, bodyName, arrivalDist, id);
 });
 
 // Scroll to zoom
@@ -950,7 +997,7 @@ function flyToById(id) {
   // highlight active
   document.querySelectorAll('.pp-item').forEach(el => el.classList.remove('active'));
   document.querySelector(`.pp-item[data-id="${id}"]`)?.classList.add('active');
-  startFlight(wpos, id, arrivalDist);
+  startFlight(wpos, id, arrivalDist, id);
 }
 
 // Reset button
@@ -962,6 +1009,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   camVel.set(0,0,0);
   document.querySelectorAll('.pp-item').forEach(el => el.classList.remove('active'));
   hidePanel();
+  highlightOrbit(null);
 });
 
 
